@@ -1,6 +1,6 @@
 import User from "../models/user.js";
 import express from "express";
-import jwt from "jsonwebtoken";
+import auth from "../middleware/auth.js";
 
 
 const router = new express.Router();
@@ -17,14 +17,9 @@ router.post('/users', async (req, res) => {
     }
 })
 
-//read users
-router.get('/users', async (req, res) => {
-    try{
-        const users = await User.find({});
-        res.send(users);
-    }catch(e){
-        res.status(500).send(e);
-    }
+//read only one user
+router.get('/users/me', auth, async (req, res) => {
+    res.send(req.user);
 })
 
 //read one user
@@ -100,5 +95,28 @@ router.post('/users/login', async(req, res) => {
     }
 })
 
+//user logout from one device
+router.post('/users/logout', auth, async (req, res) => {
+    try{
+        req.user.tokens = req.user.tokens.filter((token) => {
+            return token.token !== req.token;
+        })
+        await req.user.save();
+        res.send();
+    }catch(e){
+        res.status(500).send();
+    }
+})
+
+//user logout from all devices
+router.post('/users/logoutAll', auth, async (req, res) => {
+    try{
+        req.user.tokens = [];
+        await req.user.save();
+        res.send();
+    }catch(e){
+        res.status(500).send();
+    }
+})
 
 export default router;
