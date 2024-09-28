@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import validator from "validator";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import Task from "./task.js";
 
 const UserSchema = new mongoose.Schema({
     name: {
@@ -48,7 +49,18 @@ const UserSchema = new mongoose.Schema({
             required: true
         }
     }]
+}, {
+    timestamps: true
 })
+
+//toJSON helps to hide the password and tokens
+UserSchema.methods.toJSON = function() {
+    const user = this;
+    const userObject = user.toObject();
+    delete userObject.password;
+    delete userObject.tokens;
+    return userObject;
+}
 
 UserSchema.methods.generateAuthToken = async function (){
     const user = this;
@@ -76,6 +88,7 @@ UserSchema.statics.findByCredential = async (email, password) => {
     return user;
 }
 
+//saving the user
 UserSchema.pre('save', async function (next){
     const user = this;
     if(user.isModified('password')){
@@ -83,6 +96,16 @@ UserSchema.pre('save', async function (next){
     }
     next();
 })
+
+UserSchema.virtual('tasks', {
+    ref: 'Tasks',
+    localField: '_id',
+    foreignField: 'owner'
+});
+
+
+
+
 
 const User = mongoose.model('User', UserSchema);
 
