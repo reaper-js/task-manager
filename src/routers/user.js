@@ -1,6 +1,8 @@
-import User from "../models/user.js";
 import express from "express";
+import multer from "multer";
+import sharp from "sharp";
 import auth from "../middleware/auth.js";
+import User from "../models/user.js";
 import Task from "../models/task.js";
 
 
@@ -53,6 +55,49 @@ router.patch('/users/me', auth, async (req, res) => {
         res.status(500).send();
     }
 })
+
+//upload the profile picture
+const upload = multer({
+    limits: {
+        fileSize: 1000000
+    },
+    fileFilter(req, file, cb){
+        if(!file.originalname.match(/\.(jpg|jpeg|png)$/)){
+            return cb(new Error('Please upload an image'));
+        }
+        cb(undefined, true);
+    }
+})
+router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => {
+    req.user.avatar = req.file.buffer;
+    await req.user.save();
+    res.send();
+}, (error, req, res, next) => {
+    res.status(400).send({error: error.message});
+})
+
+//remove profile picture
+router.delete('/users/me/avatar', auth, async (req, res) => {
+    req.user.avatar = undefined;
+    await req.user.save();
+    res.send();
+})
+
+//access the profile picture
+router.get('/users/:id/avatar', async (req, res) => {
+    try{
+        const user = await User.findById(req.params.id);
+        if(!user || !user.avatar){
+            throw new Error()
+        }
+        res.set('Content-Type', 'image/jpg');
+        res.send(user.avatar);
+    }catch(e){
+        res.status(404).send();
+    }
+})
+
+
 
 //delete User
 router.delete('/users/me',auth, async (req, res) => {
